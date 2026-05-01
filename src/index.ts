@@ -19,6 +19,9 @@ import { createProviderRegistry } from './providers/index.js';
 import { getMilvusClient, closeMilvusClient } from './clients/milvus.client.js';
 import { createAllTools } from './tools/index.js';
 import { createApp } from './server/index.js';
+import { CodeReviewService } from './services/code-review.service.js';
+import { ReviewHistoryService } from './services/review-history.service.js';
+import { TOOL_QUERY_INTERNAL_DOCS } from './tools/index.js';
 
 const logger = pino({ name: 'main' });
 
@@ -70,6 +73,23 @@ async function main(): Promise<void> {
   logger.info({ toolCount: Object.keys(tools).length }, 'Agent tools created');
 
   // -------------------------------------------------------------------------
+  // 4b. Create code review service
+  // -------------------------------------------------------------------------
+  logger.info('Initializing code review service...');
+  const reviewHistoryService = new ReviewHistoryService(config.code.review.historyFile);
+  const llmProvider = providerRegistry.getDefaultLLM().chatModel(config.llm.model);
+  const internalDocsTool = tools[TOOL_QUERY_INTERNAL_DOCS];
+  const codeReviewService = new CodeReviewService({
+    config,
+    llmProvider,
+    historyService: reviewHistoryService,
+    internalDocsTool: internalDocsTool?.execute
+      ? { execute: internalDocsTool.execute as (args: Record<string, unknown>, options: unknown) => Promise<unknown> }
+      : undefined,
+  });
+  logger.info('Code review service initialized');
+
+  // -------------------------------------------------------------------------
   // 5. Create and start Hono server
   // -------------------------------------------------------------------------
   logger.info('Creating Hono application...');
@@ -78,6 +98,7 @@ async function main(): Promise<void> {
     providerRegistry,
     milvusClient,
     tools,
+    codeReviewService,
   });
 
   const port = config.server.port;

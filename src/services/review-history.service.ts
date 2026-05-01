@@ -60,9 +60,9 @@ export class ReviewHistoryService {
   /**
    * Get a code review result by ID.
    */
-  async getById(id: string): Promise<CodeReviewResult | null> {
+  async getById(id: string): Promise<CodeReviewResult | undefined> {
     await this.ensureLoaded();
-    return this.store.get(id) ?? null;
+    return this.store.get(id);
   }
 
   /**

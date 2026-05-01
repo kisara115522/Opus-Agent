@@ -29,7 +29,7 @@ const logger = pino({ name: 'review-routes' });
 export interface ReviewRouteDeps {
   codeReviewService: {
     review: (request: CodeReviewRequest, progress?: (msg: string) => void) => Promise<CodeReviewResult>;
-    getById: (id: string) => Promise<CodeReviewResult | null>;
+    getById: (id: string) => Promise<CodeReviewResult | undefined>;
     latest: (limit: number) => Promise<CodeReviewResult[]>;
   };
   config: {

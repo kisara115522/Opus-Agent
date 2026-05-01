@@ -20,6 +20,7 @@ import { createHealthRoutes } from '../routes/health.js';
 import { createReleaseRoutes } from '../routes/release.js';
 import { createReviewRouter } from '../routes/review.js';
 import { TOOL_QUERY_PROMETHEUS_ALERTS, TOOL_QUERY_INTERNAL_DOCS } from '../tools/index.js';
+import type { CodeReviewService } from '../services/code-review.service.js';
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -30,6 +31,7 @@ export interface AppDeps {
   providerRegistry: ProviderRegistry;
   milvusClient: MilvusClient;
   tools: Record<string, Tool>;
+  codeReviewService: CodeReviewService;
 }
 
 // ---------------------------------------------------------------------------
@@ -49,7 +51,7 @@ export interface AppDeps {
  * - `/*` - Static files (must be last as a catch-all)
  */
 export function createApp(deps: AppDeps): Hono {
-  const { config, providerRegistry, milvusClient, tools } = deps;
+  const { config, providerRegistry, milvusClient, tools, codeReviewService } = deps;
   const app = new Hono();
 
   // -------------------------------------------------------------------------
@@ -79,14 +81,11 @@ export function createApp(deps: AppDeps): Hono {
   app.route('/api', releaseRoutes);
 
   // Code review routes (mounted at root for /api/code-review/*)
-  // TODO: Replace stub with real codeReviewService once the code review agent is ready
   const reviewRouter = createReviewRouter({
     codeReviewService: {
-      review: async (_request, _progress) => {
-        throw new Error('Code review service not yet implemented');
-      },
-      getById: async (_id) => null,
-      latest: async (_limit) => [],
+      review: (request, progress) => codeReviewService.review(request, progress),
+      getById: (id) => codeReviewService.getById(id),
+      latest: (limit) => codeReviewService.latest(limit),
     },
     config: { codeReview: config.code.review },
   });
