@@ -20,10 +20,10 @@
 | Skills 系统骨架 | `completed` | 1 | 接口 + DefaultSkillRegistry |
 | Chat Channel 骨架 | `completed` | 1 | 接口 + DefaultChannelRegistry + WebChannel stub |
 | Event Bus 骨架 | `completed` | 1 | AgentEvent 类型 + DefaultEventBus |
-| DateTime tool | `pending` | 2 | |
-| InternalDocs tool | `pending` | 2 | |
-| QueryMetrics tool | `pending` | 2 | |
-| QueryLogs tool | `pending` | 2 | |
+| DateTime tool | `completed` | 2 | |
+| InternalDocs tool | `completed` | 2 | RAG vector search |
+| QueryMetrics tool | `completed` | 2 | Prometheus alerts + mock |
+| QueryLogs tool | `completed` | 2 | Cloud logs mock |
 | 熔断器 (circuit-breaker) | `completed` | 2 | 39 个单元测试 |
 | 调用限制 guards | `completed` | 2 | ToolCallLimit + ModelCallLimit |
 | ReAct Agent 封装 | `completed` | 2 | generateText + streamText + guards |
