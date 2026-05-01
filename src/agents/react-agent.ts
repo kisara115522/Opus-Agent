@@ -20,6 +20,7 @@ import {
   type LanguageModel,
   type Tool,
   type ToolSet,
+  type ToolExecutionOptions,
   type GenerateTextResult,
   type StreamTextResult,
   type StepResult,
@@ -247,7 +248,7 @@ export class ReActAgent {
         parameters: originalTool.parameters,
         execute: async (
           args: Record<string, unknown>,
-          options: { abortSignal?: AbortSignal },
+          options: ToolExecutionOptions,
         ) => {
           // Check tool call limit
           if (guardSuite) {
