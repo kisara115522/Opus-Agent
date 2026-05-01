@@ -6,70 +6,63 @@
 
 ## 当前状态
 
-- **Phase**: 2 - Agent 工具 + 防护
-- **整体进度**: 40%（Phase 1 完成，Phase 2 进行中）
+- **Phase**: 4 - 发布预检
+- **整体进度**: 70%（Phase 1-3 完成，Phase 4 进行中）
 - **最后更新**: 2026-05-01
 
 ## 已完成
 
 ### Phase 1: 基础设施 ✅
-- [x] 项目目录 + Git + 远程仓库
-- [x] README.md + .gitignore + .env.example
-- [x] docs/WORK_RULES.md, MIGRATION_LOG.md, ARCHITECTURE.md, ORCHESTRATOR_STATE.md
-- [x] package.json + tsconfig.json + vitest.config.ts
-- [x] src/config/index.ts (Zod 校验配置)
-- [x] src/providers/ (registry + openai + anthropic + dashscope)
-- [x] src/clients/milvus.client.ts + embedding.client.ts
-- [x] src/constants/milvus.ts
-- [x] src/services/document-chunk.service.ts + vector-embedding.service.ts + vector-index.service.ts + vector-search.service.ts
-- [x] src/types/ (common, chat, release, review, evidence, index)
-- [x] src/skills/ (types + registry)
-- [x] src/channels/ (types + registry + web.channel)
-- [x] src/events/ (EventBus + AgentEvent)
-- [x] src/utils/ (text, file, git)
-- [x] tests/unit/document-chunk.service.test.ts (24 tests)
-- [x] TypeScript 编译通过 (tsc --noEmit)
+Config + Providers + Milvus + Embedding + VectorServices + Types + Skills/Channels/Events + Utils
+
+### Phase 2: Agent 工具 + 防护 ✅
+4 Tools + CircuitBreaker + CallLimits + ReActAgent (63 tests passing)
+
+### Phase 3: Chat + RAG ✅
+- [x] Chat service (buildSystemPrompt, createChatSession, executeChat, executeChatStream)
+- [x] RAG service (queryWithContext, queryWithContextStream)
+- [x] Chat routes (4 endpoints: chat, chat_stream, clear, session)
+- [x] Server setup (Hono app, CORS, error-handler, static-files)
+- [x] Entry point (config -> providers -> milvus -> tools -> app -> serve)
+- [x] Health route (GET /milvus/health)
 
 ## 进行中
 
-### Phase 2: Agent 工具 + 防护
-- [ ] Agent A (worktree: agent-tools): 4 个工具
-- [ ] Agent B (worktree: agent-guards): Guards + ReAct Agent 封装
+### Phase 4: 发布预检
+- [ ] Agent E (worktree: agent-scoring): Risk scoring engine + history/audit + report
+- [ ] Agent F (worktree: agent-precheck): Release precheck agent + routes
 
 ## Agent 分配
 
-### Agent A: agent-tools
-**任务**: 4 个 Vercel AI SDK 工具
+### Agent E: agent-scoring
+**任务**: 风险评分 + 历史/审计 + 报告服务
 **文件范围**:
-- src/tools/datetime.tool.ts
-- src/tools/internal-docs.tool.ts
-- src/tools/query-metrics.tool.ts
-- src/tools/query-logs.tool.ts
-**要求**: 每个工具单独 commit
+- src/services/risk-scoring.service.ts
+- src/services/release-report.service.ts
+- src/services/precheck-history.service.ts
+- src/services/precheck-weight-audit.service.ts
+**参考**: RiskScoringService.java, ReleaseReportService.java
 
-### Agent B: agent-guards
-**任务**: 防护系统 + ReAct Agent 封装
+### Agent F: agent-precheck
+**任务**: 发布预检 Agent + 路由
 **文件范围**:
-- src/agents/guards/circuit-breaker.ts
-- src/agents/guards/tool-call-limit.ts
-- src/agents/guards/model-call-limit.ts
-- src/agents/react-agent.ts
-- tests/unit/circuit-breaker.test.ts
-**要求**: 每个文件单独 commit
+- src/services/release-precheck.service.ts
+- src/services/release-precheck-agent.service.ts
+- src/routes/release.ts (8 端点)
+**参考**: ReleasePrecheckService.java, ReleasePrecheckAgentService.java, ReleaseController.java
 
-## 下一步（Phase 2 完成后）
+## 下一步
 
-1. Merge 所有 worktree 到 main
-2. 验证编译通过
+1. Merge worktrees 到 main
+2. 验证编译 + 测试
 3. Push
-4. 进入 Phase 3: Chat + RAG
+4. 进入 Phase 5: 代码审查
 
 ## 恢复流程
 
-如果上下文丢失：
 1. 读本文档了解当前状态
 2. 读 docs/MIGRATION_LOG.md 了解模块进度
 3. 读 docs/ARCHITECTURE.md 了解架构设计
-4. 检查 git log 了解最近提交
-5. 检查是否有未合并的 worktree: `git worktree list`
+4. `git log --oneline -10` 了解最近提交
+5. `git worktree list` 检查未合并分支
 6. 继续执行下一步
