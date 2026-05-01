@@ -6,6 +6,7 @@
  */
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { dirname } from 'node:path';
 import pino from 'pino';
 import type { ReleaseWeightAuditRecord } from '../types/release.js';
@@ -35,6 +36,7 @@ export class PrecheckWeightAuditService {
     afterWeights: Record<string, number>,
   ): Promise<void> {
     const record: ReleaseWeightAuditRecord = {
+      id: randomUUID(),
       changedAt: new Date().toISOString(),
       operator: operator?.trim() || 'unknown',
       beforeWeights: { ...beforeWeights },
