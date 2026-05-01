@@ -31,15 +31,17 @@
 | RAG service | `completed` | 3 | queryWithContext, queryWithContextStream |
 | 会话管理 | `completed` | 3 | Map<string, SessionState> + 滑动窗口 (max 6 pairs) |
 | Chat 路由 | `completed` | 3 | 4 个端点: chat, chat_stream, clear, session |
-| 风险评分引擎 | `pending` | 4 | |
-| 发布预检 Agent 服务 | `pending` | 4 | |
-| 发布预检报告服务 | `pending` | 4 | |
-| 发布预检历史/审计 | `pending` | 4 | |
-| 发布预检路由 | `pending` | 4 | |
-| Git 工具 | `pending` | 5 | |
-| 代码审查服务 | `pending` | 5 | |
-| 代码审查 Agent 服务 | `pending` | 5 | |
-| 代码审查路由 | `pending` | 5 | |
+| 风险评分引擎 | `completed` | 4 | 10 因子加权评分 |
+| 发布预检 Agent 服务 | `completed` | 4 | Planner/Executor/Reporter 模式 |
+| 发布预检报告服务 | `completed` | 4 | buildSummary + buildMarkdown |
+| 发布预检历史/审计 | `completed` | 4 | JsonFileStore + 文件持久化 |
+| 发布预检路由 | `completed` | 4 | 8 端点 |
+| Git 工具 | `completed` | 5 | runGit + collectCommits + collectChangedFiles + collectPatches |
+| 代码审查服务 | `completed` | 5 | 6 步审查流水线 + 12 规则检查 |
+| 代码审查 Agent 服务 | `completed` | 5 | Planner/Reviewer/Judge 三阶段 |
+| 代码审查报告服务 | `completed` | 5 | buildSummary + buildMarkdown |
+| 代码审查历史 | `completed` | 5 | 内存 Map + 文件原子写入 |
+| 代码审查路由 | `completed` | 5 | 8 端点 |
 | 文件上传路由 | `pending` | 6 | |
 | 健康检查路由 | `completed` | 6 | GET /milvus/health |
 | 前端静态文件 | `completed` | 6 | @hono/node-server serveStatic |
@@ -183,6 +185,47 @@
 - 优雅关闭: SIGTERM/SIGINT 信号触发 Milvus 连接关闭
 - SSE 流式超时设置 5 分钟（匹配 Java SseEmitter 超时）
 - 错误处理使用 CommonResponse 包装，保持 API 兼容
+
+### 2026-05-01: Phase 4 - 发布预检完成
+
+**完成内容**:
+- `src/services/risk-scoring.service.ts` - 10 因子加权评分引擎，精确移植 Java 版本
+- `src/services/release-report.service.ts` - buildSummary + buildMarkdown 报告生成
+- `src/services/precheck-history.service.ts` - JsonFileStore 文件持久化
+- `src/services/precheck-weight-audit.service.ts` - 权重变更审计日志
+- `src/services/release-precheck-agent.service.ts` - Planner/Executor/Reporter 多 Agent 模式
+- `src/services/release-precheck.service.ts` - 编排服务
+- `src/routes/release.ts` - 8 个端点（同步/流式审查、配置、历史、反馈等）
+
+**关键决策**:
+- 使用 Vercel AI SDK generateText 替代 DashScope ReactAgent
+- 权重审计使用 randomUUID() 生成记录 ID
+- 风险评分严格对齐 Java 版本 10 因子权重配置
+
+---
+
+### 2026-05-01: Phase 5 - 代码审查（进行中）
+
+**完成内容**:
+- `src/services/code-review-report.service.ts` - 审查报告组装（buildSummary + buildMarkdown）
+- `src/services/code-review-agent.service.ts` - 多 Agent 审查（Planner/Reviewer/Judge）
+- `src/services/code-review.service.ts` - 6 步审查流水线
+- `src/services/review-history.service.ts` - 审查历史持久化
+- `src/routes/review.ts` - 8 个端点
+- `src/server/app.ts` - 挂载审查路由
+
+**关键决策**:
+- Agent 模式使用 Vercel AI SDK generateText 顺序调用 3 个 Agent
+- 审查历史使用内存 Map + 文件原子写入
+- SSE 流式审查复用 Hono streamSSE 模式
+
+### 2026-05-01: Phase 5 集成完成
+
+**完成内容**:
+- 更新 `src/index.ts` 入口点：创建 ReviewHistoryService + CodeReviewService
+- 更新 `src/server/app.ts`：AppDeps 接口增加 codeReviewService，替换 stub 为真实服务
+- 修复 ReviewHistoryService / CodeReviewService / routes 之间的 null/undefined 类型不匹配
+- TypeScript 编译通过，63 测试全部通过
 
 ---
 

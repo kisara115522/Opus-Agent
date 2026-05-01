@@ -6,8 +6,8 @@
 
 ## 当前状态
 
-- **Phase**: 4 - 发布预检
-- **整体进度**: 70%（Phase 1-3 完成，Phase 4 进行中）
+- **Phase**: 6 - 收尾
+- **整体进度**: 90%（Phase 1-5 完成，Phase 6 进行中）
 - **最后更新**: 2026-05-01
 
 ## 已完成
@@ -26,30 +26,38 @@ Config + Providers + Milvus + Embedding + VectorServices + Types + Skills/Channe
 - [x] Entry point (config -> providers -> milvus -> tools -> app -> serve)
 - [x] Health route (GET /milvus/health)
 
+### Phase 4: 发布预检 ✅
+- [x] Agent E: Risk scoring engine + history/audit + report (risk-scoring, release-report, precheck-history, precheck-weight-audit services)
+- [x] Agent F: Release precheck agent + routes (release-precheck-agent, release-precheck services, release routes)
+
+### Phase 5: 代码审查 ✅
+- [x] Agent G: Code review services (code-review, code-review-agent, code-review-report)
+- [x] Agent H: Review history + routes (review-history, routes/review, server/app update)
+
 ## 进行中
 
-### Phase 4: 发布预检
-- [ ] Agent E (worktree: agent-scoring): Risk scoring engine + history/audit + report
-- [ ] Agent F (worktree: agent-precheck): Release precheck agent + routes
+### Phase 6: 收尾
+- [ ] 代码审查模块集成验证 + 编译检查
+- [ ] 更新入口点（src/index.ts）集成新模块
+- [ ] MIGRATION_LOG 收尾更新
 
 ## Agent 分配
 
-### Agent E: agent-scoring
-**任务**: 风险评分 + 历史/审计 + 报告服务
+### Agent G: agent-code-review-service
+**任务**: 代码审查服务 + git 工具增强
 **文件范围**:
-- src/services/risk-scoring.service.ts
-- src/services/release-report.service.ts
-- src/services/precheck-history.service.ts
-- src/services/precheck-weight-audit.service.ts
-**参考**: RiskScoringService.java, ReleaseReportService.java
+- src/services/code-review.service.ts
+- src/services/code-review-agent.service.ts
+- src/services/code-review-report.service.ts
+- src/utils/git.ts (enhance: collectPatches with size limits)
+**参考**: CodeReviewService.java, CodeReviewAgentService.java
 
-### Agent F: agent-precheck
-**任务**: 发布预检 Agent + 路由
+### Agent H: agent-code-review-routes
+**任务**: 代码审查路由 + 历史/审计
 **文件范围**:
-- src/services/release-precheck.service.ts
-- src/services/release-precheck-agent.service.ts
-- src/routes/release.ts (8 端点)
-**参考**: ReleasePrecheckService.java, ReleasePrecheckAgentService.java, ReleaseController.java
+- src/services/review-history.service.ts
+- src/routes/review.ts (8 端点)
+**参考**: CodeReviewController.java
 
 ## 下一步
 
