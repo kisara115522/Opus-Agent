@@ -7,3 +7,5 @@ export {
   collectPatches,
 } from './git.js';
 export type { GitCommit, GitFile, GitDiff, RunGitOptions } from './git.js';
+export { color, box, createSpinner, progressBar, table, promptInput, promptConfirm, promptPassword, promptSelect, showBanner, step } from './terminal.js';
+export type { Spinner } from './terminal.js';
