@@ -8,16 +8,18 @@
 
 | 模块 | 状态 | Phase | 备注 |
 |------|------|-------|------|
-| 项目骨架 (package.json, tsconfig) | `pending` | 1 | |
-| 配置模块 (config) | `pending` | 1 | |
-| Provider 抽象层 | `pending` | 1 | 多 provider，不绑定 DashScope |
+| 项目骨架 (package.json, tsconfig) | `completed` | 1 | |
+| 配置模块 (config) | `completed` | 1 | |
+| Provider 抽象层 | `completed` | 1 | 多 provider，不绑定 DashScope |
+| DTO 类型定义 (types/) | `completed` | 1 | CommonResponse, Chat, Release, Review, Evidence |
+| 工具函数 (utils/) | `completed` | 1 | text helpers, JsonFileStore, git operations |
 | Milvus 客户端 | `pending` | 1 | |
 | Embedding 客户端 | `pending` | 1 | 多 provider embedding |
 | 文档分片服务 | `pending` | 1 | |
 | 向量索引/搜索服务 | `pending` | 1 | |
-| Skills 系统骨架 | `pending` | 1 | 预留，空实现 |
-| Chat Channel 骨架 | `pending` | 1 | 预留，空实现 |
-| Event Bus 骨架 | `pending` | 1 | 预留，空实现 |
+| Skills 系统骨架 | `completed` | 1 | 接口 + DefaultSkillRegistry |
+| Chat Channel 骨架 | `completed` | 1 | 接口 + DefaultChannelRegistry + WebChannel stub |
+| Event Bus 骨架 | `completed` | 1 | AgentEvent 类型 + DefaultEventBus |
 | DateTime tool | `pending` | 2 | |
 | InternalDocs tool | `pending` | 2 | |
 | QueryMetrics tool | `pending` | 2 | |
@@ -65,6 +67,36 @@
 
 **下一步**:
 - Phase 1 开始: 项目骨架初始化
+
+### 2026-05-01: 扩展系统骨架 + 类型定义
+
+**完成内容**:
+- `src/types/`: 全部 DTO 类型定义 (common, chat, release, review, evidence)
+  - CommonResponse<T>, ApiResponse<T> 泛型响应包装
+  - ChatRequest, ChatResponse, SseMessage, SessionInfo, ClearRequest, HistoryMessage
+  - ReleasePrecheckRequest, PrecheckResult, RiskFactor, ChangeItem, WatchMetric, RollbackStep, PrecheckFeedbackRequest, ReleaseWeightAuditRecord
+  - CodeReviewRequest, CodeReviewResult, CodeReviewFinding, CodeReviewCommit, CodeReviewIncidentEvidence, CodeReviewConfigResponse
+  - ReleaseEvidence, ReleaseAgentExecutionResult, RiskScoreResult
+- `src/skills/`: Skills 系统骨架
+  - Skill, SkillContext, SkillResult, SkillRegistry 接口
+  - DefaultSkillRegistry 实现（基于关键词触发匹配）
+- `src/channels/`: Chat Channel 系统骨架
+  - ChatChannel, IncomingMessage, OutgoingMessage, MessageHandler, ChannelRegistry 接口
+  - DefaultChannelRegistry 实现
+  - WebChannel stub（HTTP/SSE，Phase 3 完善）
+- `src/events/`: Event Bus 骨架
+  - AgentEvent 联合类型（10 种事件）
+  - DefaultEventBus 实现（基于 Node.js EventEmitter）
+- `src/utils/`: 工具函数
+  - text.ts: truncate, isBlank, containsAny, safeLower
+  - file.ts: JsonFileStore<T> JSON 文件持久化
+  - git.ts: runGit, collectCommits, collectChangedFiles, collectPatches
+
+**关键决策**:
+- 类型定义严格对应 Java DTO 字段，保证 API 兼容
+- SkillRegistry 使用简单关键词匹配，后续可扩展为意图识别
+- EventBus 使用 Node.js EventEmitter，设置 maxListeners=50
+- WebChannel 仅定义接口骨架，HTTP/SSE 实现在 Phase 3 完成
 
 ---
 
