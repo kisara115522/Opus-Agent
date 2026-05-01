@@ -209,6 +209,7 @@ async function stepServer(config: EnvConfig): Promise<void> {
     defaultValue: config.PORT || '9900',
     placeholder: '9900',
     validate: (v) => {
+      if (!v) return;
       const n = Number(v);
       if (!Number.isInteger(n) || n < 1 || n > 65535) return '端口必须是 1-65535 之间的整数';
     },
@@ -216,7 +217,7 @@ async function stepServer(config: EnvConfig): Promise<void> {
   config.PORT = port;
 }
 
-async function stepLLM(config: EnvConfig): Promise<void> {
+async function stepLLM(config: EnvConfig, quick = false): Promise<void> {
   const provider = checkCancel(await p.select({
     message: '选择 LLM 提供商:',
     options: LLM_PROVIDERS.map(pr => ({ value: pr.value, label: pr.label, hint: pr.hint })),
@@ -230,16 +231,20 @@ async function stepLLM(config: EnvConfig): Promise<void> {
   const hasValidKey = existingKey && existingKey !== 'sk-your-key-here';
 
   if (hasValidKey) {
-    p.log.info(`当前 ${keyEnv}: ${maskKey(existingKey)}`);
-    const keep = checkCancel(await p.confirm({
-      message: '保留现有 API Key?',
-      initialValue: true,
-    }));
-    if (!keep) {
-      const newKey = checkCancel(await p.password({
-        message: `输入 ${keyEnv}:`,
+    if (quick) {
+      p.log.info(`${keyEnv}: ${maskKey(existingKey)} (已保留)`);
+    } else {
+      p.log.info(`当前 ${keyEnv}: ${maskKey(existingKey)}`);
+      const keep = checkCancel(await p.confirm({
+        message: '保留现有 API Key?',
+        initialValue: true,
       }));
-      if (newKey) config[keyEnv] = newKey;
+      if (!keep) {
+        const newKey = checkCancel(await p.password({
+          message: `输入 ${keyEnv}:`,
+        }));
+        if (newKey) config[keyEnv] = newKey;
+      }
     }
   } else {
     const newKey = checkCancel(await p.password({
@@ -295,6 +300,10 @@ async function stepLLM(config: EnvConfig): Promise<void> {
       message: 'API Endpoint:',
       defaultValue: config.CUSTOM_LLM_ENDPOINT || 'https://api.example.com/v1',
       placeholder: 'https://api.example.com/v1',
+      validate: (v) => {
+        if (!v) return;
+        try { new URL(v); } catch { return '请输入有效的 URL'; }
+      },
     }));
     config.CUSTOM_LLM_ENDPOINT = endpoint;
   }
@@ -542,7 +551,7 @@ async function main(): Promise<void> {
   }));
 
   // QuickStart only needs LLM
-  await stepLLM(config);
+  await stepLLM(config, mode === 'quick');
 
   if (mode === 'manual') {
     await stepServer(config);
