@@ -18,6 +18,7 @@ import { createStaticFilesMiddleware } from './middleware/static-files.js';
 import { createChatRoutes } from '../routes/chat.js';
 import { createHealthRoutes } from '../routes/health.js';
 import { createReleaseRoutes } from '../routes/release.js';
+import { createReviewRouter } from '../routes/review.js';
 import { TOOL_QUERY_PROMETHEUS_ALERTS, TOOL_QUERY_INTERNAL_DOCS } from '../tools/index.js';
 
 // ---------------------------------------------------------------------------
@@ -76,6 +77,20 @@ export function createApp(deps: AppDeps): Hono {
     internalDocsTool: tools[TOOL_QUERY_INTERNAL_DOCS],
   });
   app.route('/api', releaseRoutes);
+
+  // Code review routes (mounted at root for /api/code-review/*)
+  // TODO: Replace stub with real codeReviewService once the code review agent is ready
+  const reviewRouter = createReviewRouter({
+    codeReviewService: {
+      review: async (_request, _progress) => {
+        throw new Error('Code review service not yet implemented');
+      },
+      getById: async (_id) => null,
+      latest: async (_limit) => [],
+    },
+    config: { codeReview: config.code.review },
+  });
+  app.route('/', reviewRouter);
 
   // Health check routes (mounted at root)
   const healthRoutes = createHealthRoutes({ milvusClient });
