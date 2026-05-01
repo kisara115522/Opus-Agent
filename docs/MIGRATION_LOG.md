@@ -244,6 +244,23 @@
 - 系统提示词指导 Agent 按步骤排查，比 Java 的图编排更简洁
 - 低温度 0.3 保证分析确定性
 
+### 2026-05-01: 测试 + 前端 + Docker
+
+**完成内容**:
+- AIOps 服务单元测试：18 个测试（成功/错误/进度回调/结果结构）
+- Release Precheck 服务单元测试：52 个测试（RiskScoring 33 + ReleaseReport 19）
+- Chat 服务单元测试：进行中
+- 前端重写：Open WebUI 风格暗色主题，ChatGPT 布局
+- Docker Compose：Milvus standalone 一键启动
+- Makefile 更新：docker-up/down/format targets
+
+**测试统计**:
+- circuit-breaker: 39 tests
+- document-chunk: 24 tests
+- ai-ops: 18 tests
+- release-precheck: 52 tests
+- Total: 133 tests passing
+
 ---
 
 ## 问题记录
