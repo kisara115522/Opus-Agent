@@ -19,6 +19,7 @@ import { createChatRoutes } from '../routes/chat.js';
 import { createHealthRoutes } from '../routes/health.js';
 import { createReleaseRoutes } from '../routes/release.js';
 import { createReviewRouter } from '../routes/review.js';
+import { createUploadRoutes } from '../routes/upload.js';
 import { TOOL_QUERY_PROMETHEUS_ALERTS, TOOL_QUERY_INTERNAL_DOCS } from '../tools/index.js';
 import type { CodeReviewService } from '../services/code-review.service.js';
 
@@ -32,6 +33,7 @@ export interface AppDeps {
   milvusClient: MilvusClient;
   tools: Record<string, Tool>;
   codeReviewService: CodeReviewService;
+  indexFile?: (filePath: string) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -51,7 +53,7 @@ export interface AppDeps {
  * - `/*` - Static files (must be last as a catch-all)
  */
 export function createApp(deps: AppDeps): Hono {
-  const { config, providerRegistry, milvusClient, tools, codeReviewService } = deps;
+  const { config, providerRegistry, milvusClient, tools, codeReviewService, indexFile } = deps;
   const app = new Hono();
 
   // -------------------------------------------------------------------------
@@ -90,6 +92,10 @@ export function createApp(deps: AppDeps): Hono {
     config: { codeReview: config.code.review },
   });
   app.route('/', reviewRouter);
+
+  // File upload routes (mounted at /api/*)
+  const uploadRoutes = createUploadRoutes({ config, indexFile });
+  app.route('/api', uploadRoutes);
 
   // Health check routes (mounted at root)
   const healthRoutes = createHealthRoutes({ milvusClient });

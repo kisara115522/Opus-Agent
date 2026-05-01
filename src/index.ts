@@ -21,6 +21,7 @@ import { createAllTools } from './tools/index.js';
 import { createApp } from './server/index.js';
 import { CodeReviewService } from './services/code-review.service.js';
 import { ReviewHistoryService } from './services/review-history.service.js';
+import { indexSingleFile } from './services/vector-index.service.js';
 import { TOOL_QUERY_INTERNAL_DOCS } from './tools/index.js';
 
 const logger = pino({ name: 'main' });
@@ -99,6 +100,14 @@ async function main(): Promise<void> {
     milvusClient,
     tools,
     codeReviewService,
+    indexFile: (filePath: string) => indexSingleFile(filePath, milvusClient, {
+      provider: config.embedding.provider,
+      model: config.embedding.model,
+      apiKey: config.embedding.apiKey,
+    }, {
+      maxSize: config.document.chunk.maxSize,
+      overlap: config.document.chunk.overlap,
+    }),
   });
 
   const port = config.server.port;
