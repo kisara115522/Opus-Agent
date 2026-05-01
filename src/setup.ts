@@ -6,7 +6,7 @@
  * Run: npm run setup / make setup
  */
 
-import { writeFile, readFile, access } from 'node:fs/promises';
+import { writeFile, readFile, copyFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import * as p from '@clack/prompts';
 import chalk from 'chalk';
@@ -70,10 +70,6 @@ function checkCancel<T>(value: T | symbol): T {
     process.exit(0);
   }
   return value;
-}
-
-async function fileExists(path: string): Promise<boolean> {
-  try { await access(path); return true; } catch { return false; }
 }
 
 async function loadExistingEnv(): Promise<EnvConfig> {
@@ -223,7 +219,7 @@ async function stepServer(config: EnvConfig): Promise<void> {
 async function stepLLM(config: EnvConfig): Promise<void> {
   const provider = checkCancel(await p.select({
     message: '选择 LLM 提供商:',
-    options: LLM_PROVIDERS.map(p => ({ value: p.value, label: p.label, hint: p.hint })),
+    options: LLM_PROVIDERS.map(pr => ({ value: pr.value, label: pr.label, hint: pr.hint })),
     initialValue: config.LLM_PROVIDER || 'openai',
   }));
   config.LLM_PROVIDER = provider;
@@ -331,7 +327,7 @@ async function stepEmbedding(config: EnvConfig): Promise<void> {
 
   const provider = checkCancel(await p.select({
     message: '选择 Embedding 提供商:',
-    options: EMBEDDING_PROVIDERS.map(p => ({ value: p.value, label: p.label, hint: p.hint })),
+    options: EMBEDDING_PROVIDERS.map(pr => ({ value: pr.value, label: pr.label, hint: pr.hint })),
   }));
   config.EMBEDDING_PROVIDER = provider;
 
@@ -575,10 +571,11 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Write .env
+  // Write .env (backup existing first)
   const s = p.spinner();
   s.start('写入 .env 文件...');
   try {
+    try { await copyFile(ENV_PATH, ENV_PATH + '.bak'); } catch {}
     await writeFile(ENV_PATH, generateEnv(config), 'utf-8');
     s.stop('.env 文件已生成');
   } catch (err: unknown) {
