@@ -27,8 +27,8 @@
 | 熔断器 (circuit-breaker) | `completed` | 2 | 39 个单元测试 |
 | 调用限制 guards | `completed` | 2 | ToolCallLimit + ModelCallLimit |
 | ReAct Agent 封装 | `completed` | 2 | generateText + streamText + guards |
-| Chat service | `pending` | 3 | |
-| RAG service | `pending` | 3 | |
+| Chat service | `completed` | 3 | buildSystemPrompt, createChatSession, executeChat, executeChatStream |
+| RAG service | `completed` | 3 | queryWithContext, queryWithContextStream |
 | 会话管理 | `pending` | 3 | |
 | Chat 路由 | `pending` | 3 | |
 | 风险评分引擎 | `pending` | 4 | |
@@ -136,6 +136,26 @@
 - Circuit breaker 失败检测：JSON 解析 (success/status 字段) + 关键字匹配
 - ReAct Agent 同时支持同步 (generateText) 和流式 (streamText) 模式
 - 使用 Vercel AI SDK v4.3.19 的 maxSteps API（非 v5 的 stopWhen）
+
+### 2026-05-01: Chat Service + RAG Service
+
+**完成内容**:
+- `src/services/chat.service.ts` - Chat 服务，封装系统提示词构建和 Agent 会话管理
+  - `buildSystemPrompt(history)` - 构建系统提示词，注入对话历史
+  - `createChatSession(provider, tools, config, history)` - 创建带工具和防护的 ReAct Agent 会话
+  - `executeChat(session, question)` - 同步对话执行
+  - `executeChatStream(session, question)` - 流式对话执行
+- `src/services/rag.service.ts` - RAG 服务，结合向量检索和 LLM 生成
+  - `queryWithContext(question, options)` - 同步 RAG 查询（检索 + 上下文构建 + 生成）
+  - `queryWithContextStream(question, options)` - 流式 RAG 查询
+  - `RagService` 类 + `createRagService()` 工厂函数
+
+**关键决策**:
+- ChatService 保留 Java 版本的系统提示词原文（WORK_RULES.md §6）
+- RAG 服务使用 Vercel AI SDK 的 generateText/streamText 替代 DashScope 原生 SDK
+- Guard 配置通过 `as GuardConfig` 类型断言处理 Zod 推断的可选字段问题
+- RAG 服务通过构造函数注入依赖（milvusClient, embeddingConfig, llmProvider, config）
+- 流式 RAG 在无搜索结果时返回合成流而非抛出错误
 
 ---
 
