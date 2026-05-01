@@ -43,6 +43,9 @@ install:
 # Run all checks
 check: typecheck test
 
+# Quick start: setup + dev
+start-dev: setup dev
+
 # Build and run
 all: build start
 
