@@ -42,7 +42,7 @@
 | 代码审查报告服务 | `completed` | 5 | buildSummary + buildMarkdown |
 | 代码审查历史 | `completed` | 5 | 内存 Map + 文件原子写入 |
 | 代码审查路由 | `completed` | 5 | 8 端点 |
-| 文件上传路由 | `pending` | 6 | |
+| 文件上传路由 | `completed` | 6 | POST /api/upload + 向量索引 |
 | 健康检查路由 | `completed` | 6 | GET /milvus/health |
 | 前端静态文件 | `completed` | 6 | @hono/node-server serveStatic |
 | Makefile | `pending` | 7 | |
