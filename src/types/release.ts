@@ -158,6 +158,8 @@ export interface PrecheckFeedbackRequest {
  * Weight change audit record for release precheck scoring.
  */
 export interface ReleaseWeightAuditRecord {
+  /** Unique record identifier */
+  id: string;
   /** Timestamp of the weight change (ISO string) */
   changedAt: string;
   /** Operator who made the change */
