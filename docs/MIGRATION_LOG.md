@@ -45,9 +45,9 @@
 | 文件上传路由 | `completed` | 6 | POST /api/upload + 向量索引 |
 | 健康检查路由 | `completed` | 6 | GET /milvus/health |
 | 前端静态文件 | `completed` | 6 | @hono/node-server serveStatic |
-| Makefile | `pending` | 7 | |
-| API 兼容性测试 | `pending` | 7 | |
-| 文档收尾 | `pending` | 7 | |
+| Makefile | `completed` | 7 | dev/build/test/typecheck/start |
+| API 兼容性测试 | `completed` | 7 | TypeScript 编译 + 63 测试通过 |
+| 文档收尾 | `completed` | 7 | ARCHITECTURE + MIGRATION_LOG + ORCHESTRATOR_STATE |
 
 ---
 
