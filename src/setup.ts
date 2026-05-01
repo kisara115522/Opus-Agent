@@ -212,6 +212,10 @@ async function stepServer(config: EnvConfig): Promise<void> {
     message: '服务端口:',
     defaultValue: config.PORT || '9900',
     placeholder: '9900',
+    validate: (v) => {
+      const n = Number(v);
+      if (!Number.isInteger(n) || n < 1 || n > 65535) return '端口必须是 1-65535 之间的整数';
+    },
   }));
   config.PORT = port;
 }
@@ -256,6 +260,25 @@ async function stepLLM(config: EnvConfig): Promise<void> {
       p.log.success('API Key 格式验证通过');
     } else {
       p.log.warn(validation.message);
+    }
+
+    // Test connection
+    if (validation.valid && provider !== 'custom') {
+      const testConn = checkCancel(await p.confirm({
+        message: '测试 API 连接?',
+        initialValue: true,
+      }));
+      if (testConn) {
+        const s = p.spinner();
+        s.start(`连接 ${providerLabel(provider)}...`);
+        const result = await testProviderConnection(provider, keyToValidate);
+        if (result.success) {
+          s.stop(`${result.message}`);
+        } else {
+          s.stop(`连接失败: ${result.message}`);
+          p.log.warn('API Key 可能无效，但你可以继续配置');
+        }
+      }
     }
   }
 
@@ -513,13 +536,30 @@ async function main(): Promise<void> {
     }
   }
 
-  // Wizard steps
-  await stepServer(config);
+  // Setup mode
+  const mode = checkCancel(await p.select({
+    message: '选择配置模式:',
+    options: [
+      { value: 'quick',   label: 'QuickStart', hint: '仅配置 LLM，其余使用默认值' },
+      { value: 'manual',  label: 'Manual',     hint: '逐步配置所有选项' },
+    ],
+  }));
+
+  // QuickStart only needs LLM
   await stepLLM(config);
-  await stepEmbedding(config);
-  await stepMilvus(config);
-  await stepOptional(config);
-  await stepGuard(config);
+
+  if (mode === 'manual') {
+    await stepServer(config);
+    await stepEmbedding(config);
+    await stepMilvus(config);
+    await stepOptional(config);
+    await stepGuard(config);
+  } else {
+    // QuickStart defaults
+    if (!config.EMBEDDING_PROVIDER) config.EMBEDDING_PROVIDER = config.LLM_PROVIDER || 'openai';
+    const embModels = getDefaultEmbeddingModels(config.EMBEDDING_PROVIDER);
+    if (!config.EMBEDDING_MODEL && embModels.length > 0) config.EMBEDDING_MODEL = embModels[0];
+  }
 
   // Summary
   showSummary(config);
