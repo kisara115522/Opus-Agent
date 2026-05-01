@@ -1,4 +1,4 @@
-.PHONY: dev build test clean lint typecheck start
+.PHONY: dev build test clean lint typecheck start docker-up docker-down format
 
 # Development
 dev:
@@ -41,3 +41,15 @@ check: typecheck test
 
 # Build and run
 all: build start
+
+# Start Milvus with Docker
+docker-up:
+	docker-compose -f vector-database.yml up -d
+
+# Stop Milvus
+docker-down:
+	docker-compose -f vector-database.yml down
+
+# Format code (if prettier is configured)
+format:
+	npx prettier --write "src/**/*.ts" 2>/dev/null || echo "No prettier config found"
