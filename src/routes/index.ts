@@ -6,3 +6,4 @@
 
 export { createChatRoutes, type ChatRouteDeps } from './chat.js';
 export { createHealthRoutes, type HealthRouteDeps } from './health.js';
+export { createReleaseRoutes, type ReleaseRouteDeps } from './release.js';

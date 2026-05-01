@@ -17,6 +17,8 @@ import { errorHandler } from './middleware/error-handler.js';
 import { createStaticFilesMiddleware } from './middleware/static-files.js';
 import { createChatRoutes } from '../routes/chat.js';
 import { createHealthRoutes } from '../routes/health.js';
+import { createReleaseRoutes } from '../routes/release.js';
+import { TOOL_QUERY_PROMETHEUS_ALERTS, TOOL_QUERY_INTERNAL_DOCS } from '../tools/index.js';
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -66,6 +68,14 @@ export function createApp(deps: AppDeps): Hono {
   // Chat API routes (mounted at /api/*)
   const chatRoutes = createChatRoutes({ providerRegistry, config, tools });
   app.route('/api', chatRoutes);
+
+  // Release precheck routes (mounted at /api/*)
+  const releaseRoutes = createReleaseRoutes({
+    config,
+    queryMetricsTool: tools[TOOL_QUERY_PROMETHEUS_ALERTS],
+    internalDocsTool: tools[TOOL_QUERY_INTERNAL_DOCS],
+  });
+  app.route('/api', releaseRoutes);
 
   // Health check routes (mounted at root)
   const healthRoutes = createHealthRoutes({ milvusClient });

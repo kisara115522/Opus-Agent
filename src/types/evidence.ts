@@ -34,16 +34,14 @@ export interface ReleaseEvidence {
  * Captures the output of the release pre-check agent pipeline.
  */
 export interface ReleaseAgentExecutionResult {
-  /** Planner agent output */
-  plannerOutput: string;
-  /** Executor agent output */
-  executorOutput: string;
-  /** Reporter agent output */
-  reporterOutput: string;
-  /** Combined summary */
-  summary: string;
-  /** Evidence chain collected during execution */
-  evidenceChain: string[];
+  /** Evidence snapshot collected during execution */
+  evidence: ReleaseEvidence;
+  /** Planner-generated step list */
+  plannerSteps: string[];
+  /** Executor logs per step */
+  executorLogs: string[];
+  /** Reporter summary */
+  reporterSummary: string;
 }
 
 /**

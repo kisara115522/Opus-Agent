@@ -1,88 +1,100 @@
 /**
- * 发布预检权重变更审计服务
+ * Precheck Weight Audit Service - ported from Java PrecheckWeightAuditService.java
  *
- * Ported from Java PrecheckWeightAuditService.java.
- *
- * Records weight configuration changes for auditability.
- * Uses JsonFileStore for file-backed persistence.
- * New records are prepended (newest first). Caps at 1000 records.
+ * File-persistent audit log for weight changes in release precheck scoring.
+ * Records operator, before/after weights, and timestamp.
  */
 
-import { randomUUID } from 'node:crypto';
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import pino from 'pino';
-import { JsonFileStore } from '../utils/file.js';
 import type { ReleaseWeightAuditRecord } from '../types/release.js';
-import { getConfig } from '../config/index.js';
 
 const logger = pino({ name: 'precheck-weight-audit-service' });
 
 const MAX_AUDIT_RECORDS = 1000;
 
 // ---------------------------------------------------------------------------
-// Store singleton (lazy-initialized on first access)
+// Service
 // ---------------------------------------------------------------------------
 
-let _store: JsonFileStore<ReleaseWeightAuditRecord> | undefined;
+export class PrecheckWeightAuditService {
+  private readonly auditFilePath: string;
 
-function getStore(): JsonFileStore<ReleaseWeightAuditRecord> {
-  if (_store === undefined) {
-    const config = getConfig();
-    _store = new JsonFileStore<ReleaseWeightAuditRecord>(
-      config.release.precheck.weightAuditFile,
-    );
+  constructor(auditFilePath: string) {
+    this.auditFilePath = auditFilePath;
   }
-  return _store;
-}
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+  /**
+   * Record a weight change event.
+   */
+  async recordWeightChange(
+    operator: string,
+    beforeWeights: Record<string, number>,
+    updatedWeights: Record<string, number>,
+    afterWeights: Record<string, number>,
+  ): Promise<void> {
+    const record: ReleaseWeightAuditRecord = {
+      changedAt: new Date().toISOString(),
+      operator: operator?.trim() || 'unknown',
+      beforeWeights: { ...beforeWeights },
+      updatedWeights: { ...updatedWeights },
+      afterWeights: { ...afterWeights },
+    };
 
-/**
- * Record a weight configuration change.
- *
- * @param operator - Who made the change (defaults to "unknown")
- * @param beforeWeights - Weight values before the change
- * @param updatedWeights - The delta (changed weights only)
- * @param afterWeights - Full weight values after the change
- */
-export async function recordChange(
-  operator: string,
-  beforeWeights: Record<string, number>,
-  updatedWeights: Record<string, number>,
-  afterWeights: Record<string, number>,
-): Promise<void> {
-  const store = getStore();
+    const records = await this.readAllRecords();
+    records.unshift(record);
 
-  const record: ReleaseWeightAuditRecord = {
-    id: randomUUID(),
-    changedAt: new Date().toISOString(),
-    operator: operator == null || operator.trim() === '' ? 'unknown' : operator.trim(),
-    beforeWeights: { ...beforeWeights },
-    updatedWeights: { ...updatedWeights },
-    afterWeights: { ...afterWeights },
-  };
+    // Trim to max records
+    const trimmed = records.length > MAX_AUDIT_RECORDS
+      ? records.slice(0, MAX_AUDIT_RECORDS)
+      : records;
 
-  // Prepend new record (newest first), cap at MAX_AUDIT_RECORDS
-  const records = await store.load();
-  records.unshift(record);
-  if (records.length > MAX_AUDIT_RECORDS) {
-    records.length = MAX_AUDIT_RECORDS;
+    await this.persist(trimmed);
+
+    logger.info({ operator: record.operator }, '权重变更已记录');
   }
-  await store.save(records);
 
-  logger.info({ operator: record.operator }, '权重变更已记录');
-}
+  /**
+   * Get the most recent weight audit records.
+   */
+  async latest(limit: number): Promise<ReleaseWeightAuditRecord[]> {
+    const all = await this.readAllRecords();
+    const safeLimit = Math.max(1, limit);
+    return all.length <= safeLimit ? all : all.slice(0, safeLimit);
+  }
 
-/**
- * Get the most recent weight audit records (newest first).
- *
- * @param limit - Maximum number of records to return (default: 20)
- */
-export async function getAuditLog(
-  limit: number = 20,
-): Promise<ReleaseWeightAuditRecord[]> {
-  const records = await getStore().load();
-  const safeLimit = Math.max(1, limit);
-  return records.slice(0, safeLimit);
+  // -------------------------------------------------------------------------
+  // Private: File I/O
+  // -------------------------------------------------------------------------
+
+  private async readAllRecords(): Promise<ReleaseWeightAuditRecord[]> {
+    if (!this.auditFilePath) return [];
+
+    try {
+      const content = await readFile(this.auditFilePath, 'utf-8');
+      const loaded = JSON.parse(content) as ReleaseWeightAuditRecord[];
+      return Array.isArray(loaded) ? loaded : [];
+    } catch (err: unknown) {
+      if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn({ path: this.auditFilePath, error: message }, '读取权重审计日志失败');
+      return [];
+    }
+  }
+
+  private async persist(records: ReleaseWeightAuditRecord[]): Promise<void> {
+    if (!this.auditFilePath) return;
+
+    try {
+      const dir = dirname(this.auditFilePath);
+      await mkdir(dir, { recursive: true });
+      await writeFile(this.auditFilePath, JSON.stringify(records, null, 2), 'utf-8');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn({ path: this.auditFilePath, error: message }, '持久化权重审计日志失败');
+    }
+  }
 }

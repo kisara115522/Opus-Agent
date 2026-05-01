@@ -1,112 +1,166 @@
 /**
- * 预检历史存储服务
+ * Precheck History Service - ported from Java PrecheckHistoryService.java
  *
- * Ported from Java PrecheckHistoryService.java.
- *
- * Uses JsonFileStore for file-backed persistence of PrecheckResult records.
- * Provides save, getById, getLatest, and addFeedback operations.
+ * In-memory store with file persistence for release precheck results.
+ * Loads history from disk on startup, persists on every save.
  */
 
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import pino from 'pino';
-import { JsonFileStore } from '../utils/file.js';
-import type {
-  PrecheckResult,
-  PrecheckFeedbackRequest,
-} from '../types/release.js';
-import { getConfig } from '../config/index.js';
+import type { PrecheckResult, PrecheckFeedbackRequest } from '../types/release.js';
 
 const logger = pino({ name: 'precheck-history-service' });
 
 // ---------------------------------------------------------------------------
-// Store singleton (lazy-initialized on first access)
+// Service
 // ---------------------------------------------------------------------------
 
-let _store: JsonFileStore<PrecheckResult> | undefined;
+export class PrecheckHistoryService {
+  private readonly store = new Map<string, PrecheckResult>();
+  private readonly order: string[] = [];
+  private readonly historyFilePath: string;
+  private loaded = false;
 
-function getStore(): JsonFileStore<PrecheckResult> {
-  if (_store === undefined) {
-    const config = getConfig();
-    _store = new JsonFileStore<PrecheckResult>(
-      config.release.precheck.historyFile,
+  constructor(historyFilePath: string) {
+    this.historyFilePath = historyFilePath;
+  }
+
+  /**
+   * Save a precheck result. Updates existing entry if ID already exists.
+   */
+  async save(result: PrecheckResult): Promise<PrecheckResult> {
+    await this.ensureLoaded();
+
+    this.store.set(result.id, result);
+
+    // Move to front of order
+    const existingIndex = this.order.indexOf(result.id);
+    if (existingIndex !== -1) {
+      this.order.splice(existingIndex, 1);
+    }
+    this.order.unshift(result.id);
+
+    await this.persistToDisk();
+
+    logger.info(
+      { id: result.id, service: result.serviceName, score: result.riskScore },
+      '预检结果已保存',
     );
-  }
-  return _store;
-}
 
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
-
-/**
- * Save a precheck result to history.
- * If a result with the same ID already exists, it is replaced.
- * New results are prepended (newest first) to match Java behavior.
- */
-export async function save(result: PrecheckResult): Promise<PrecheckResult> {
-  const store = getStore();
-  const records = await store.load();
-  const filtered = records.filter((r) => r.id !== result.id);
-  filtered.unshift(result);
-  await store.save(filtered);
-  logger.info(
-    {
-      id: result.id,
-      service: result.serviceName,
-      score: result.riskScore,
-    },
-    '预检结果已保存',
-  );
-  return result;
-}
-
-/**
- * Get a precheck result by its ID, or null if not found.
- */
-export async function getById(id: string): Promise<PrecheckResult | null> {
-  return getStore().getById(id);
-}
-
-/**
- * Get the most recent precheck results (newest first).
- */
-export async function getLatest(limit: number = 10): Promise<PrecheckResult[]> {
-  const records = await getStore().load();
-  const safeLimit = Math.max(1, limit);
-  return records.slice(0, safeLimit);
-}
-
-/**
- * Add post-release feedback to an existing precheck result.
- * Updates status to "FEEDBACKED" and appends incident note to summary if applicable.
- * The updated result is moved to the front (newest first).
- * Returns the updated result, or null if the ID was not found.
- */
-export async function addFeedback(
-  id: string,
-  feedback: PrecheckFeedbackRequest,
-): Promise<PrecheckResult | null> {
-  const store = getStore();
-  const existing = await store.getById(id);
-  if (existing === null) {
-    return null;
+    return result;
   }
 
-  existing.feedback = feedback;
-  existing.status = 'FEEDBACKED';
-  existing.updatedAt = new Date().toISOString();
-
-  if (feedback.incidentOccurred === true) {
-    existing.summary =
-      existing.summary +
-      ' 发布后回填显示发生故障，建议调整规则权重并补充观测项。';
+  /**
+   * Get a precheck result by ID.
+   */
+  async getById(id: string): Promise<PrecheckResult | undefined> {
+    await this.ensureLoaded();
+    return this.store.get(id);
   }
 
-  // Move to front (newest first), matching Java saveFeedback behavior
-  const records = await store.load();
-  const filtered = records.filter((r) => r.id !== id);
-  filtered.unshift(existing);
-  await store.save(filtered);
+  /**
+   * Save feedback for an existing precheck result.
+   */
+  async saveFeedback(
+    id: string,
+    feedback: PrecheckFeedbackRequest,
+  ): Promise<PrecheckResult | undefined> {
+    await this.ensureLoaded();
 
-  logger.info({ id }, '预检反馈已保存');
-  return existing;
+    const existing = this.store.get(id);
+    if (!existing) return undefined;
+
+    existing.feedback = feedback;
+    existing.status = 'FEEDBACKED';
+    existing.updatedAt = new Date().toISOString();
+
+    if (feedback.incidentOccurred) {
+      existing.summary =
+        existing.summary + ' 发布后回填显示发生故障，建议调整规则权重并补充观测项。';
+    }
+
+    await this.save(existing);
+    return existing;
+  }
+
+  /**
+   * Get the most recent precheck results.
+   */
+  async latest(limit: number): Promise<PrecheckResult[]> {
+    await this.ensureLoaded();
+
+    const results: PrecheckResult[] = [];
+    const safeLimit = Math.max(1, limit);
+
+    for (let i = 0; i < this.order.length && i < safeLimit; i++) {
+      const item = this.store.get(this.order[i]);
+      if (item) {
+        results.push(item);
+      }
+    }
+
+    return results;
+  }
+
+  // -------------------------------------------------------------------------
+  // Private: Persistence
+  // -------------------------------------------------------------------------
+
+  private async ensureLoaded(): Promise<void> {
+    if (this.loaded) return;
+    this.loaded = true;
+    await this.loadFromDisk();
+  }
+
+  private async loadFromDisk(): Promise<void> {
+    if (!this.historyFilePath) return;
+
+    try {
+      const content = await readFile(this.historyFilePath, 'utf-8');
+      const loaded = JSON.parse(content) as PrecheckResult[];
+
+      this.store.clear();
+      this.order.length = 0;
+
+      if (Array.isArray(loaded)) {
+        for (const item of loaded) {
+          if (!item?.id) continue;
+          this.store.set(item.id, item);
+          this.order.push(item.id);
+        }
+      }
+
+      logger.info(
+        { path: this.historyFilePath, count: this.store.size },
+        '发布预检历史加载完成',
+      );
+    } catch (err: unknown) {
+      // File not found is expected on first run
+      if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        logger.debug({ path: this.historyFilePath }, '预检历史文件不存在，跳过加载');
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn({ path: this.historyFilePath, error: message }, '发布预检历史加载失败');
+    }
+  }
+
+  private async persistToDisk(): Promise<void> {
+    if (!this.historyFilePath) return;
+
+    try {
+      const dir = dirname(this.historyFilePath);
+      await mkdir(dir, { recursive: true });
+
+      const data = this.order
+        .map((id) => this.store.get(id))
+        .filter((item): item is PrecheckResult => item !== undefined);
+
+      await writeFile(this.historyFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.warn({ path: this.historyFilePath, error: message }, '发布预检历史持久化失败');
+    }
+  }
 }
