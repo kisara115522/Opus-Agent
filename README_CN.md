@@ -80,13 +80,14 @@
 # 安装依赖
 npm install
 
-# 复制环境配置
+# 交互式配置（推荐）
+npm run setup
+
+# 或手动复制配置
 cp .env.example .env
 
-# 编辑 .env 文件，填入 API Key 和配置
-
-# 启动 Milvus（如果使用 Docker）
-docker-compose -f vector-database.yml up -d
+# 启动 Milvus（可选，知识库功能需要）
+docker compose up -d
 
 # 开发模式
 make dev

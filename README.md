@@ -82,13 +82,14 @@ Enterprise-grade intelligent operations agent system - ported from Java to TypeS
 # Install dependencies
 npm install
 
-# Copy env config
+# Interactive setup (recommended)
+npm run setup
+
+# Or manually copy and edit config
 cp .env.example .env
 
-# Edit .env with your API keys and settings
-
-# Start Milvus (if using Docker)
-docker-compose -f vector-database.yml up -d
+# Start Milvus (optional, for RAG features)
+docker compose up -d
 
 # Development mode
 make dev
