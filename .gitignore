@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+*.log
+uploads/
+volumes/
+.DS_Store
+target/
+.idea/
+.vscode/
+*.pid
