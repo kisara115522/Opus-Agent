@@ -48,11 +48,11 @@ all: build start
 
 # Start Milvus with Docker
 docker-up:
-	docker-compose -f vector-database.yml up -d
+	docker compose up -d
 
 # Stop Milvus
 docker-down:
-	docker-compose -f vector-database.yml down
+	docker compose down
 
 # Format code (if prettier is configured)
 format:
