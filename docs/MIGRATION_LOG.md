@@ -8,13 +8,13 @@
 
 | 模块 | 状态 | Phase | 备注 |
 |------|------|-------|------|
-| 项目骨架 (package.json, tsconfig) | `pending` | 1 | |
-| 配置模块 (config) | `pending` | 1 | |
+| 项目骨架 (package.json, tsconfig) | `completed` | 1 | |
+| 配置模块 (config) | `completed` | 1 | stub config with hardcoded defaults |
 | Provider 抽象层 | `pending` | 1 | 多 provider，不绑定 DashScope |
-| Milvus 客户端 | `pending` | 1 | |
-| Embedding 客户端 | `pending` | 1 | 多 provider embedding |
-| 文档分片服务 | `pending` | 1 | |
-| 向量索引/搜索服务 | `pending` | 1 | |
+| Milvus 客户端 | `completed` | 1 | @zilliz/milvus2-sdk-node |
+| Embedding 客户端 | `completed` | 1 | 多 provider: OpenAI + DashScope |
+| 文档分片服务 | `completed` | 1 | Markdown-aware, 含单元测试 |
+| 向量索引/搜索服务 | `completed` | 1 | index + search 服务 |
 | Skills 系统骨架 | `pending` | 1 | 预留，空实现 |
 | Chat Channel 骨架 | `pending` | 1 | 预留，空实现 |
 | Event Bus 骨架 | `pending` | 1 | 预留，空实现 |
@@ -65,6 +65,32 @@
 
 **下一步**:
 - Phase 1 开始: 项目骨架初始化
+
+---
+
+### 2026-05-01: Milvus + Embedding + Vector Services
+
+**完成内容**:
+- 创建 stub config (`src/config/stub.ts`) - 带硬编码默认值的配置模块
+- 创建 Milvus 常量 (`src/constants/milvus.ts`) - 集合名、维度、字段名等
+- 创建 Milvus 客户端 (`src/clients/milvus.client.ts`) - 连接、建集合、建索引、健康检查
+- 创建 Embedding 客户端 (`src/clients/embedding.client.ts`) - 多 provider (OpenAI + DashScope)
+- 创建 DocumentChunk 类型 (`src/types/document-chunk.ts`)
+- 创建文档分片服务 (`src/services/document-chunk.service.ts`) - Markdown 标题分割 + 段落分割 + 重叠
+- 创建向量嵌入服务 (`src/services/vector-embedding.service.ts`) - 批量/单条嵌入
+- 创建向量索引服务 (`src/services/vector-index.service.ts`) - 文件读取 -> 分片 -> 嵌入 -> Milvus 写入
+- 创建向量搜索服务 (`src/services/vector-search.service.ts`) - 查询嵌入 -> Milvus 搜索 -> 结果解析
+- 创建 24 个单元测试 (`tests/unit/document-chunk.service.test.ts`) - 全部通过
+
+**关键决策**:
+- 使用 @zilliz/milvus2-sdk-node 的 SearchSimpleReq 接口（而非旧版 SearchReq）
+- delete 操作使用 `filter` 字段（SDK DeleteReq 类型要求）
+- Embedding 客户端通过标准 fetch API 调用 DashScope，不引入额外 SDK
+- 文档分片重叠逻辑支持中文句号（。）、问号（？）、感叹号（！）作为句子边界
+
+**下一步**:
+- Provider 抽象层实现
+- Skills/Channels/Events 骨架
 
 ---
 
