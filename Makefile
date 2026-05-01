@@ -1,4 +1,8 @@
-.PHONY: dev build test clean lint typecheck start docker-up docker-down format
+.PHONY: dev build test clean lint typecheck start docker-up docker-down format setup
+
+# Interactive setup
+setup:
+	npx tsx src/setup.ts
 
 # Development
 dev:
