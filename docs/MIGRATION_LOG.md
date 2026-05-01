@@ -24,9 +24,9 @@
 | InternalDocs tool | `pending` | 2 | |
 | QueryMetrics tool | `pending` | 2 | |
 | QueryLogs tool | `pending` | 2 | |
-| 熔断器 (circuit-breaker) | `pending` | 2 | |
-| 调用限制 guards | `pending` | 2 | |
-| ReAct Agent 封装 | `pending` | 2 | |
+| 熔断器 (circuit-breaker) | `completed` | 2 | 39 个单元测试 |
+| 调用限制 guards | `completed` | 2 | ToolCallLimit + ModelCallLimit |
+| ReAct Agent 封装 | `completed` | 2 | generateText + streamText + guards |
 | Chat service | `pending` | 3 | |
 | RAG service | `pending` | 3 | |
 | 会话管理 | `pending` | 3 | |
@@ -118,6 +118,24 @@
 - SkillRegistry 使用简单关键词匹配，后续可扩展为意图识别
 - EventBus 使用 Node.js EventEmitter，设置 maxListeners=50
 - WebChannel 仅定义接口骨架，HTTP/SSE 实现在 Phase 3 完成
+
+### 2026-05-01: Agent Guards + ReAct Agent
+
+**完成内容**:
+- `src/agents/guards/circuit-breaker.ts` - 工具失败熔断器，按 tool name 追踪连续失败
+- `src/agents/guards/tool-call-limit.ts` - 工具调用次数限制（默认 12）
+- `src/agents/guards/model-call-limit.ts` - 模型调用次数限制（默认 25）
+- `src/agents/guards/index.ts` - Guards barrel export + GuardSuite 工厂
+- `src/agents/react-agent.ts` - ReAct Agent 封装，集成 guards
+- `src/agents/index.ts` - Agents barrel export
+- `tests/unit/circuit-breaker.test.ts` - 39 个单元测试，全部通过
+
+**关键决策**:
+- Guards 通过包装工具 execute 函数实现，在工具执行边界强制执行防护
+- maxSteps 设置为 modelCallLimit，限制总 LLM 调用次数
+- Circuit breaker 失败检测：JSON 解析 (success/status 字段) + 关键字匹配
+- ReAct Agent 同时支持同步 (generateText) 和流式 (streamText) 模式
+- 使用 Vercel AI SDK v4.3.19 的 maxSteps API（非 v5 的 stopWhen）
 
 ---
 
