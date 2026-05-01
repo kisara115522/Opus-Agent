@@ -2,6 +2,8 @@
 
 Enterprise-grade intelligent operations agent system - ported from Java to TypeScript.
 
+[中文文档](README_CN.md)
+
 ## Features
 
 ### RAG Chat
