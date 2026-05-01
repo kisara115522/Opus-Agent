@@ -4,6 +4,7 @@
   "description": "Enterprise-grade intelligent operations agent system",
   "type": "module",
   "scripts": {
+    "setup": "tsx src/setup.ts",
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
