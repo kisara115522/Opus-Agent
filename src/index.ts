@@ -16,11 +16,12 @@ import { serve } from '@hono/node-server';
 import pino from 'pino';
 import { getConfig } from './config/index.js';
 import { createProviderRegistry } from './providers/index.js';
-import { getMilvusClient, closeMilvusClient } from './clients/milvus.client.js';
+import { tryConnectMilvus, closeMilvusClient } from './clients/milvus.client.js';
 import { createAllTools } from './tools/index.js';
 import { createApp } from './server/index.js';
 import { CodeReviewService } from './services/code-review.service.js';
 import { ReviewHistoryService } from './services/review-history.service.js';
+import { AiOpsService } from './services/ai-ops.service.js';
 import { indexSingleFile } from './services/vector-index.service.js';
 import { TOOL_QUERY_INTERNAL_DOCS } from './tools/index.js';
 
@@ -45,10 +46,10 @@ async function main(): Promise<void> {
   );
 
   // -------------------------------------------------------------------------
-  // 3. Initialize Milvus client
+  // 3. Initialize Milvus client (optional)
   // -------------------------------------------------------------------------
   logger.info('Connecting to Milvus...');
-  const milvusClient = await getMilvusClient({
+  const milvusClient = await tryConnectMilvus({
     host: config.milvus.host,
     port: config.milvus.port,
     username: config.milvus.username,
@@ -56,7 +57,11 @@ async function main(): Promise<void> {
     database: config.milvus.database,
     timeout: config.milvus.timeout,
   });
-  logger.info('Milvus client initialized');
+  if (milvusClient) {
+    logger.info('Milvus client initialized');
+  } else {
+    logger.warn('Milvus 不可用，知识库功能已禁用');
+  }
 
   // -------------------------------------------------------------------------
   // 4. Create agent tools
@@ -91,6 +96,17 @@ async function main(): Promise<void> {
   logger.info('Code review service initialized');
 
   // -------------------------------------------------------------------------
+  // 4c. Create AIOps service
+  // -------------------------------------------------------------------------
+  logger.info('Initializing AIOps service...');
+  const aiOpsService = new AiOpsService({
+    llmProvider,
+    tools,
+    config,
+  });
+  logger.info('AIOps service initialized');
+
+  // -------------------------------------------------------------------------
   // 5. Create and start Hono server
   // -------------------------------------------------------------------------
   logger.info('Creating Hono application...');
@@ -100,14 +116,17 @@ async function main(): Promise<void> {
     milvusClient,
     tools,
     codeReviewService,
-    indexFile: (filePath: string) => indexSingleFile(filePath, milvusClient, {
-      provider: config.embedding.provider,
-      model: config.embedding.model,
-      apiKey: config.embedding.apiKey,
-    }, {
-      maxSize: config.document.chunk.maxSize,
-      overlap: config.document.chunk.overlap,
-    }),
+    aiOpsService,
+    indexFile: milvusClient
+      ? (filePath: string) => indexSingleFile(filePath, milvusClient, {
+          provider: config.embedding.provider,
+          model: config.embedding.model,
+          apiKey: config.embedding.apiKey,
+        }, {
+          maxSize: config.document.chunk.maxSize,
+          overlap: config.document.chunk.overlap,
+        })
+      : undefined,
   });
 
   const port = config.server.port;

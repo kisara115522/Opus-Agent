@@ -19,7 +19,7 @@ const logger = pino({ name: 'health-routes' });
 // ---------------------------------------------------------------------------
 
 export interface HealthRouteDeps {
-  milvusClient: MilvusClient;
+  milvusClient: MilvusClient | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -40,6 +40,16 @@ export function createHealthRoutes(deps: HealthRouteDeps): Hono {
   // GET /milvus/health - Milvus health check
   // -------------------------------------------------------------------------
   routes.get('/milvus/health', async (c) => {
+    if (!milvusClient) {
+      return c.json(
+        successResponse({
+          status: 'disabled',
+          milvus: false,
+          message: 'Milvus 未配置，知识库功能不可用',
+        }),
+      );
+    }
+
     try {
       const health = await milvusClient.checkHealth();
 

@@ -20,8 +20,10 @@ import { createHealthRoutes } from '../routes/health.js';
 import { createReleaseRoutes } from '../routes/release.js';
 import { createReviewRouter } from '../routes/review.js';
 import { createUploadRoutes } from '../routes/upload.js';
+import { createAiOpsRoutes } from '../routes/ai-ops.js';
 import { TOOL_QUERY_PROMETHEUS_ALERTS, TOOL_QUERY_INTERNAL_DOCS } from '../tools/index.js';
 import type { CodeReviewService } from '../services/code-review.service.js';
+import type { AiOpsService } from '../services/ai-ops.service.js';
 
 // ---------------------------------------------------------------------------
 // Dependencies
@@ -30,9 +32,10 @@ import type { CodeReviewService } from '../services/code-review.service.js';
 export interface AppDeps {
   config: AppConfig;
   providerRegistry: ProviderRegistry;
-  milvusClient: MilvusClient;
+  milvusClient: MilvusClient | null;
   tools: Record<string, Tool>;
   codeReviewService: CodeReviewService;
+  aiOpsService: AiOpsService;
   indexFile?: (filePath: string) => Promise<void>;
 }
 
@@ -53,7 +56,7 @@ export interface AppDeps {
  * - `/*` - Static files (must be last as a catch-all)
  */
 export function createApp(deps: AppDeps): Hono {
-  const { config, providerRegistry, milvusClient, tools, codeReviewService, indexFile } = deps;
+  const { config, providerRegistry, milvusClient, tools, codeReviewService, aiOpsService, indexFile } = deps;
   const app = new Hono();
 
   // -------------------------------------------------------------------------
@@ -96,6 +99,10 @@ export function createApp(deps: AppDeps): Hono {
   // File upload routes (mounted at /api/*)
   const uploadRoutes = createUploadRoutes({ config, indexFile });
   app.route('/api', uploadRoutes);
+
+  // AIOps auto-analysis routes (mounted at /api/*)
+  const aiOpsRoutes = createAiOpsRoutes({ aiOpsService });
+  app.route('/api', aiOpsRoutes);
 
   // Health check routes (mounted at root)
   const healthRoutes = createHealthRoutes({ milvusClient });

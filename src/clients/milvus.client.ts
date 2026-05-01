@@ -135,6 +135,20 @@ export async function getMilvusClient(cfg: MilvusConfig): Promise<MilvusClient> 
 }
 
 /**
+ * Try to connect to Milvus. Returns null if connection fails
+ * (allows the app to start without Milvus).
+ */
+export async function tryConnectMilvus(cfg: MilvusConfig): Promise<MilvusClient | null> {
+  try {
+    return await getMilvusClient(cfg);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn({ error: message }, 'Milvus 连接失败，知识库功能将不可用');
+    return null;
+  }
+}
+
+/**
  * Close the singleton client (for graceful shutdown).
  */
 export async function closeMilvusClient(): Promise<void> {

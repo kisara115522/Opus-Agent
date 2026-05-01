@@ -25,8 +25,8 @@ export { createGetAvailableLogTopicsTool, createQueryLogsTool } from './query-lo
 // ---------------------------------------------------------------------------
 
 export interface AllToolsDeps {
-  /** Milvus client for vector search */
-  milvusClient: MilvusClient;
+  /** Milvus client for vector search (null = RAG disabled) */
+  milvusClient: MilvusClient | null;
   /** Embedding configuration for vector generation */
   embeddingConfig: EmbeddingConfig;
   /** Application configuration */
@@ -59,15 +59,21 @@ export const TOOL_GET_AVAILABLE_LOG_TOPICS = 'getAvailableLogTopics';
 export function createAllTools(deps: AllToolsDeps): Record<string, Tool> {
   const { milvusClient, embeddingConfig, config, ragTopK } = deps;
 
-  return {
+  const tools: Record<string, Tool> = {
     [TOOL_GET_CURRENT_DATETIME]: createDateTimeTool(),
-    [TOOL_QUERY_INTERNAL_DOCS]: createInternalDocsTool({
-      milvusClient,
-      embeddingConfig,
-      topK: ragTopK ?? config.rag.topK,
-    }),
     [TOOL_QUERY_PROMETHEUS_ALERTS]: createQueryMetricsTool(config),
     [TOOL_GET_AVAILABLE_LOG_TOPICS]: createGetAvailableLogTopicsTool(),
     [TOOL_QUERY_LOGS]: createQueryLogsTool(config),
   };
+
+  // Only create RAG tool if Milvus is available
+  if (milvusClient) {
+    tools[TOOL_QUERY_INTERNAL_DOCS] = createInternalDocsTool({
+      milvusClient,
+      embeddingConfig,
+      topK: ragTopK ?? config.rag.topK,
+    });
+  }
+
+  return tools;
 }
