@@ -6,72 +6,63 @@
 
 ## 当前状态
 
-- **Phase**: 1 - 基础设施
-- **整体进度**: 20%（骨架完成，正在并行开发核心模块）
+- **Phase**: 2 - Agent 工具 + 防护
+- **整体进度**: 40%（Phase 1 完成，Phase 2 进行中）
 - **最后更新**: 2026-05-01
 
 ## 已完成
 
-- [x] 项目目录创建
-- [x] Git 初始化 + 连接远程仓库 (git@github.com:kisara115522/Opus-Agent.git)
-- [x] README.md
-- [x] docs/WORK_RULES.md, MIGRATION_LOG.md, ARCHITECTURE.md
-- [x] package.json + tsconfig.json + vitest.config.ts + .env.example
-- [x] src/index.ts 入口
-- [x] npm install
-- [x] Initial commit + push
+### Phase 1: 基础设施 ✅
+- [x] 项目目录 + Git + 远程仓库
+- [x] README.md + .gitignore + .env.example
+- [x] docs/WORK_RULES.md, MIGRATION_LOG.md, ARCHITECTURE.md, ORCHESTRATOR_STATE.md
+- [x] package.json + tsconfig.json + vitest.config.ts
+- [x] src/config/index.ts (Zod 校验配置)
+- [x] src/providers/ (registry + openai + anthropic + dashscope)
+- [x] src/clients/milvus.client.ts + embedding.client.ts
+- [x] src/constants/milvus.ts
+- [x] src/services/document-chunk.service.ts + vector-embedding.service.ts + vector-index.service.ts + vector-search.service.ts
+- [x] src/types/ (common, chat, release, review, evidence, index)
+- [x] src/skills/ (types + registry)
+- [x] src/channels/ (types + registry + web.channel)
+- [x] src/events/ (EventBus + AgentEvent)
+- [x] src/utils/ (text, file, git)
+- [x] tests/unit/document-chunk.service.test.ts (24 tests)
+- [x] TypeScript 编译通过 (tsc --noEmit)
 
 ## 进行中
 
-- [ ] Agent 1 (worktree: agent-config): Config 模块 + Provider 抽象层
-- [ ] Agent 2 (worktree: agent-milvus): Milvus 客户端 + Embedding 客户端 + 文档分片 + 向量服务
-- [ ] Agent 3 (worktree: agent-ext): 扩展性骨架 (Skills/Channels/Events) + Types
+### Phase 2: Agent 工具 + 防护
+- [ ] Agent A (worktree: agent-tools): 4 个工具
+- [ ] Agent B (worktree: agent-guards): Guards + ReAct Agent 封装
 
 ## Agent 分配
 
-### Agent 1: agent-config
-**任务**: Config 模块 + Provider 抽象层
+### Agent A: agent-tools
+**任务**: 4 个 Vercel AI SDK 工具
 **文件范围**:
-- src/config/index.ts
-- src/providers/registry.ts
-- src/providers/types.ts
-- src/providers/openai.provider.ts
-- src/providers/anthropic.provider.ts
-- src/providers/dashscope.provider.ts
+- src/tools/datetime.tool.ts
+- src/tools/internal-docs.tool.ts
+- src/tools/query-metrics.tool.ts
+- src/tools/query-logs.tool.ts
+**要求**: 每个工具单独 commit
 
-### Agent 2: agent-milvus
-**任务**: Milvus + Embedding + 文档分片 + 向量服务
+### Agent B: agent-guards
+**任务**: 防护系统 + ReAct Agent 封装
 **文件范围**:
-- src/clients/milvus.client.ts
-- src/clients/embedding.client.ts
-- src/services/document-chunk.service.ts
-- src/services/vector-embedding.service.ts
-- src/services/vector-index.service.ts
-- src/services/vector-search.service.ts
-- src/constants/milvus.ts
-- tests/unit/document-chunk.service.test.ts
+- src/agents/guards/circuit-breaker.ts
+- src/agents/guards/tool-call-limit.ts
+- src/agents/guards/model-call-limit.ts
+- src/agents/react-agent.ts
+- tests/unit/circuit-breaker.test.ts
+**要求**: 每个文件单独 commit
 
-### Agent 3: agent-ext
-**任务**: 扩展性骨架 + Types
-**文件范围**:
-- src/skills/registry.ts
-- src/skills/types.ts
-- src/channels/registry.ts
-- src/channels/types.ts
-- src/channels/web.channel.ts
-- src/events/index.ts
-- src/types/chat.ts
-- src/types/release.ts
-- src/types/review.ts
-- src/types/common.ts
-- src/types/evidence.ts
-
-## 下一步（Agent 完成后）
+## 下一步（Phase 2 完成后）
 
 1. Merge 所有 worktree 到 main
-2. 验证编译通过 (tsc --noEmit)
+2. 验证编译通过
 3. Push
-4. 进入 Phase 2: Agent 工具 + 防护
+4. 进入 Phase 3: Chat + RAG
 
 ## 恢复流程
 
