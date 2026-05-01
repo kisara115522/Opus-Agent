@@ -9,15 +9,15 @@
 | 模块 | 状态 | Phase | 备注 |
 |------|------|-------|------|
 | 项目骨架 (package.json, tsconfig) | `completed` | 1 | |
-| 配置模块 (config) | `completed` | 1 | stub config with hardcoded defaults |
-| Provider 抽象层 | `pending` | 1 | 多 provider，不绑定 DashScope |
+| 配置模块 (config) | `completed` | 1 | Zod 校验，环境变量加载 |
+| Provider 抽象层 | `completed` | 1 | OpenAI / Anthropic / DashScope |
 | Milvus 客户端 | `completed` | 1 | @zilliz/milvus2-sdk-node |
 | Embedding 客户端 | `completed` | 1 | 多 provider: OpenAI + DashScope |
 | 文档分片服务 | `completed` | 1 | Markdown-aware, 含单元测试 |
 | 向量索引/搜索服务 | `completed` | 1 | index + search 服务 |
-| Skills 系统骨架 | `pending` | 1 | 预留，空实现 |
-| Chat Channel 骨架 | `pending` | 1 | 预留，空实现 |
-| Event Bus 骨架 | `pending` | 1 | 预留，空实现 |
+| Skills 系统骨架 | `completed` | 1 | SkillRegistry + types |
+| Chat Channel 骨架 | `completed` | 1 | ChannelRegistry + WebChannel stub |
+| Event Bus 骨架 | `completed` | 1 | EventBus + AgentEvent types |
 | DateTime tool | `pending` | 2 | |
 | InternalDocs tool | `pending` | 2 | |
 | QueryMetrics tool | `pending` | 2 | |
@@ -65,6 +65,30 @@
 
 **下一步**:
 - Phase 1 开始: 项目骨架初始化
+
+### 2026-05-01: Config + Provider 抽象层
+
+**完成内容**:
+- `src/config/index.ts` - Zod 校验配置模块，覆盖所有 application.yml 配置项
+  - server, llm (多 provider), embedding (多 provider), milvus, rag, prometheus, cls
+  - agent.guard (熔断/限制), release.precheck (评分权重/证据), code.review
+  - document.chunk, file.upload
+  - 从环境变量加载，支持 .env 文件
+- `src/providers/types.ts` - LLMProvider / EmbeddingProvider 接口 + ProviderError
+- `src/providers/registry.ts` - ProviderRegistry 类，支持注册/查找/默认设置
+- `src/providers/openai.provider.ts` - OpenAI LLM + Embedding（@ai-sdk/openai）
+- `src/providers/anthropic.provider.ts` - Anthropic LLM（@ai-sdk/anthropic）
+- `src/providers/dashscope.provider.ts` - DashScope LLM + Embedding（@ai-sdk/openai-compatible）
+- `src/providers/index.ts` - barrel export + createProviderRegistry() 工厂函数
+
+**关键决策**:
+- 配置模块使用 Zod safeParse，启动时即校验，配置错误快速失败
+- Provider 接口返回 Vercel AI SDK 的 LanguageModel 类型，与 Agent 框架无缝对接
+- DashScope 通过 @ai-sdk/openai-compatible 接入，无需自定义 HTTP 客户端
+- Anthropic 不支持 Embedding，只注册 LLM provider
+
+**下一步**:
+- Phase 1 剩余: Milvus 客户端、Embedding 客户端、文档分片、向量索引/搜索
 
 ---
 
