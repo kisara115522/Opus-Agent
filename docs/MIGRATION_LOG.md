@@ -227,6 +227,23 @@
 - 修复 ReviewHistoryService / CodeReviewService / routes 之间的 null/undefined 类型不匹配
 - TypeScript 编译通过，63 测试全部通过
 
+### 2026-05-01: Milvus 可选化 + AIOps 自动分析
+
+**完成内容**:
+- Milvus 可选化：`tryConnectMilvus` 失败返回 `null`，服务正常启动
+- 所有 Milvus 依赖改为 `MilvusClient | null`
+- 知识库工具在 Milvus 不可用时自动跳过
+- 健康检查返回 `disabled` 状态
+- AIOps 服务：`src/services/ai-ops.service.ts` - 单 Agent 循环（generateText + maxSteps:15）
+- AIOps 路由：`src/routes/ai-ops.ts` - POST /api/ai_ops SSE 流式自动分析
+- Agent 自动查询 Prometheus 告警、日志、内部文档，生成诊断报告
+
+**关键决策**:
+- 不照搬 Java 的 Supervisor-Planner-Executor 三 Agent 模式
+- 使用 Vercel AI SDK 的 `generateText({ maxSteps })` 实现单 Agent 工具调用循环
+- 系统提示词指导 Agent 按步骤排查，比 Java 的图编排更简洁
+- 低温度 0.3 保证分析确定性
+
 ---
 
 ## 问题记录
@@ -244,5 +261,6 @@
 | `CodeReviewService.java` | `review/code-review.service.ts` | 最大最复杂，约 900 行 |
 | `ToolFailureCircuitBreakerInterceptor.java` | `agents/guards/circuit-breaker.ts` | 熔断器逻辑 |
 | `ChatController.java` | `routes/chat.ts` | SSE 流式和会话管理 |
+| `AiOpsService.java` | `services/ai-ops.service.ts` | 单 Agent 循环替代三 Agent 模式 |
 | `WebMvcConfig.java` | `server/middleware/cors.ts` | CORS 配置 |
 | `application.yml` | `config/index.ts` | 所有配置项 |
