@@ -259,7 +259,18 @@
 - document-chunk: 24 tests
 - ai-ops: 18 tests
 - release-precheck: 52 tests
-- Total: 133 tests passing
+- chat: 16 tests
+- vector-services: 15 tests
+- Total: 164 tests passing
+
+### 2026-05-01: CLI 配置工具
+
+**完成内容**:
+- `src/setup.ts` - 交互式 CLI 配置工具
+- `npm run setup` - 一键配置 LLM/Embedding/Milvus/Server
+- `make setup` - Makefile target
+- `make start-dev` - 配置 + 启动快捷命令
+- README 更新 Quick Start 使用 setup 命令
 
 ---
 
