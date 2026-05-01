@@ -29,8 +29,8 @@
 | ReAct Agent 封装 | `completed` | 2 | generateText + streamText + guards |
 | Chat service | `completed` | 3 | buildSystemPrompt, createChatSession, executeChat, executeChatStream |
 | RAG service | `completed` | 3 | queryWithContext, queryWithContextStream |
-| 会话管理 | `pending` | 3 | |
-| Chat 路由 | `pending` | 3 | |
+| 会话管理 | `completed` | 3 | Map<string, SessionState> + 滑动窗口 (max 6 pairs) |
+| Chat 路由 | `completed` | 3 | 4 个端点: chat, chat_stream, clear, session |
 | 风险评分引擎 | `pending` | 4 | |
 | 发布预检 Agent 服务 | `pending` | 4 | |
 | 发布预检报告服务 | `pending` | 4 | |
@@ -41,8 +41,8 @@
 | 代码审查 Agent 服务 | `pending` | 5 | |
 | 代码审查路由 | `pending` | 5 | |
 | 文件上传路由 | `pending` | 6 | |
-| 健康检查路由 | `pending` | 6 | |
-| 前端静态文件 | `pending` | 6 | |
+| 健康检查路由 | `completed` | 6 | GET /milvus/health |
+| 前端静态文件 | `completed` | 6 | @hono/node-server serveStatic |
 | Makefile | `pending` | 7 | |
 | API 兼容性测试 | `pending` | 7 | |
 | 文档收尾 | `pending` | 7 | |
@@ -157,6 +157,33 @@
 - RAG 服务通过构造函数注入依赖（milvusClient, embeddingConfig, llmProvider, config）
 - 流式 RAG 在无搜索结果时返回合成流而非抛出错误
 
+### 2026-05-01: HTTP Server + Routes
+
+**完成内容**:
+- `src/server/middleware/cors.ts` - CORS 中间件，允许所有来源（匹配 Java WebMvcConfig）
+- `src/server/middleware/error-handler.ts` - 全局错误处理中间件，返回 CommonResponse 格式 JSON
+- `src/server/middleware/static-files.ts` - 静态文件服务中间件（@hono/node-server serveStatic）
+- `src/routes/chat.ts` - Chat 路由，移植 ChatController.java 全部 4 个端点
+  - `POST /api/chat` - 同步对话（返回 JSON）
+  - `POST /api/chat_stream` - SSE 流式对话（Hono streamSSE）
+  - `POST /api/chat/clear` - 清除会话历史
+  - `GET /api/chat/session/:id` - 获取会话信息
+  - 会话管理: Map<string, SessionState> + 滑动窗口（max 6 message pairs）
+- `src/routes/health.ts` - 健康检查路由（GET /milvus/health）
+- `src/server/app.ts` - Hono 应用组装（中间件 + 路由挂载）
+- `src/server/index.ts` - Server 模块 barrel export
+- `src/routes/index.ts` - Routes 模块 barrel export
+- `src/index.ts` - 重写入口点，启动 Hono 服务器
+
+**关键决策**:
+- 使用 Hono 的 streamSSE() 辅助函数实现 SSE 流式响应
+- 会话管理在路由层实现（Map<string, SessionState>），与 ChatService 分离
+- Chat 路由通过 ChatRouteDeps 接口注入依赖（providerRegistry, config, tools）
+- 入口点按顺序初始化: config -> providers -> milvus -> tools -> app -> serve
+- 优雅关闭: SIGTERM/SIGINT 信号触发 Milvus 连接关闭
+- SSE 流式超时设置 5 分钟（匹配 Java SseEmitter 超时）
+- 错误处理使用 CommonResponse 包装，保持 API 兼容
+
 ---
 
 ## 问题记录
@@ -174,4 +201,5 @@
 | `CodeReviewService.java` | `review/code-review.service.ts` | 最大最复杂，约 900 行 |
 | `ToolFailureCircuitBreakerInterceptor.java` | `agents/guards/circuit-breaker.ts` | 熔断器逻辑 |
 | `ChatController.java` | `routes/chat.ts` | SSE 流式和会话管理 |
+| `WebMvcConfig.java` | `server/middleware/cors.ts` | CORS 配置 |
 | `application.yml` | `config/index.ts` | 所有配置项 |
