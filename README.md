@@ -24,6 +24,12 @@ Enterprise-grade intelligent operations agent system - ported from Java to TypeS
 - Multi-agent deep review (Planner/Reviewer/Judge)
 - SSE streaming with progress updates
 
+### AIOps Auto Analysis
+- Automatic alert diagnosis using AI agent loop
+- Fetches active alerts and correlates metrics/logs automatically
+- Generates root cause analysis and remediation suggestions
+- SSE streaming with real-time progress updates
+
 ### File Upload
 - Multipart file upload with extension validation
 - Auto-vectorization for RAG knowledge base
@@ -33,14 +39,14 @@ Enterprise-grade intelligent operations agent system - ported from Java to TypeS
 ```
 ┌─────────────────────────────────────────────────────┐
 │                    Hono HTTP Server                  │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
-│  │chat.ts   │ │release.ts│ │review.ts │ │upload.ts│ │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘ │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ ┌────────┐ │
+│  │chat.ts   │ │release.ts│ │review.ts │ │upload.ts│ │ai-ops.ts│ │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘ └───┬────┘ │
 │       │             │            │            │      │
 │  ┌────▼─────────────▼────────────▼────────────▼───┐  │
 │  │              Services Layer                     │  │
 │  │  chat / rag / risk-scoring / release-precheck / │  │
-│  │  code-review / vector-*                         │  │
+│  │  code-review / ai-ops / vector-*                │  │
 │  └────┬─────────────┬────────────┬────────────────┘  │
 │       │             │            │                    │
 │  ┌────▼─────┐ ┌─────▼──────┐ ┌──▼──────────────┐    │
@@ -106,6 +112,7 @@ src/
 │   ├── chat.ts                       # Chat API (4 endpoints)
 │   ├── release.ts                    # Release precheck (8 endpoints)
 │   ├── review.ts                     # Code review (8 endpoints)
+│   ├── ai-ops.ts                     # AIOps auto-analysis
 │   ├── upload.ts                     # File upload
 │   └── health.ts                     # Health check
 ├── services/
@@ -179,6 +186,11 @@ src/
 | POST | `/api/code-review/feedback` | Submit feedback |
 | GET | `/api/code-review/export/:id` | Export as markdown |
 | GET | `/api/code-review/health` | Health check |
+
+### AIOps
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/ai_ops` | SSE streaming auto-analysis |
 
 ### File Upload
 | Method | Path | Description |
