@@ -15,9 +15,11 @@
 | Embedding 客户端 | `completed` | 1 | 多 provider: OpenAI + DashScope |
 | 文档分片服务 | `completed` | 1 | Markdown-aware, 含单元测试 |
 | 向量索引/搜索服务 | `completed` | 1 | index + search 服务 |
-| Skills 系统骨架 | `completed` | 1 | SkillRegistry + types |
-| Chat Channel 骨架 | `completed` | 1 | ChannelRegistry + WebChannel stub |
-| Event Bus 骨架 | `completed` | 1 | EventBus + AgentEvent types |
+| DTO 类型定义 (types/) | `completed` | 1 | CommonResponse, Chat, Release, Review, Evidence |
+| 工具函数 (utils/) | `completed` | 1 | text helpers, JsonFileStore, git operations |
+| Skills 系统骨架 | `completed` | 1 | 接口 + DefaultSkillRegistry |
+| Chat Channel 骨架 | `completed` | 1 | 接口 + DefaultChannelRegistry + WebChannel stub |
+| Event Bus 骨架 | `completed` | 1 | AgentEvent 类型 + DefaultEventBus |
 | DateTime tool | `pending` | 2 | |
 | InternalDocs tool | `pending` | 2 | |
 | QueryMetrics tool | `pending` | 2 | |
@@ -70,10 +72,6 @@
 
 **完成内容**:
 - `src/config/index.ts` - Zod 校验配置模块，覆盖所有 application.yml 配置项
-  - server, llm (多 provider), embedding (多 provider), milvus, rag, prometheus, cls
-  - agent.guard (熔断/限制), release.precheck (评分权重/证据), code.review
-  - document.chunk, file.upload
-  - 从环境变量加载，支持 .env 文件
 - `src/providers/types.ts` - LLMProvider / EmbeddingProvider 接口 + ProviderError
 - `src/providers/registry.ts` - ProviderRegistry 类，支持注册/查找/默认设置
 - `src/providers/openai.provider.ts` - OpenAI LLM + Embedding（@ai-sdk/openai）
@@ -87,11 +85,6 @@
 - DashScope 通过 @ai-sdk/openai-compatible 接入，无需自定义 HTTP 客户端
 - Anthropic 不支持 Embedding，只注册 LLM provider
 
-**下一步**:
-- Phase 1 剩余: Milvus 客户端、Embedding 客户端、文档分片、向量索引/搜索
-
----
-
 ### 2026-05-01: Milvus + Embedding + Vector Services
 
 **完成内容**:
@@ -99,7 +92,6 @@
 - 创建 Milvus 常量 (`src/constants/milvus.ts`) - 集合名、维度、字段名等
 - 创建 Milvus 客户端 (`src/clients/milvus.client.ts`) - 连接、建集合、建索引、健康检查
 - 创建 Embedding 客户端 (`src/clients/embedding.client.ts`) - 多 provider (OpenAI + DashScope)
-- 创建 DocumentChunk 类型 (`src/types/document-chunk.ts`)
 - 创建文档分片服务 (`src/services/document-chunk.service.ts`) - Markdown 标题分割 + 段落分割 + 重叠
 - 创建向量嵌入服务 (`src/services/vector-embedding.service.ts`) - 批量/单条嵌入
 - 创建向量索引服务 (`src/services/vector-index.service.ts`) - 文件读取 -> 分片 -> 嵌入 -> Milvus 写入
@@ -107,14 +99,25 @@
 - 创建 24 个单元测试 (`tests/unit/document-chunk.service.test.ts`) - 全部通过
 
 **关键决策**:
-- 使用 @zilliz/milvus2-sdk-node 的 SearchSimpleReq 接口（而非旧版 SearchReq）
+- 使用 @zilliz/milvus2-sdk-node 的 SearchSimpleReq 接口
 - delete 操作使用 `filter` 字段（SDK DeleteReq 类型要求）
-- Embedding 客户端通过标准 fetch API 调用 DashScope，不引入额外 SDK
+- Embedding 客户端通过标准 fetch API 调用 DashScope
 - 文档分片重叠逻辑支持中文句号（。）、问号（？）、感叹号（！）作为句子边界
 
-**下一步**:
-- Provider 抽象层实现
-- Skills/Channels/Events 骨架
+### 2026-05-01: 扩展系统骨架 + 类型定义
+
+**完成内容**:
+- `src/types/`: 全部 DTO 类型定义 (common, chat, release, review, evidence)
+- `src/skills/`: Skills 系统骨架（接口 + DefaultSkillRegistry）
+- `src/channels/`: Chat Channel 系统骨架（接口 + DefaultChannelRegistry + WebChannel stub）
+- `src/events/`: Event Bus 骨架（AgentEvent 类型 + DefaultEventBus）
+- `src/utils/`: 工具函数（text helpers, JsonFileStore, git operations）
+
+**关键决策**:
+- 类型定义严格对应 Java DTO 字段，保证 API 兼容
+- SkillRegistry 使用简单关键词匹配，后续可扩展为意图识别
+- EventBus 使用 Node.js EventEmitter，设置 maxListeners=50
+- WebChannel 仅定义接口骨架，HTTP/SSE 实现在 Phase 3 完成
 
 ---
 
